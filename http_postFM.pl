@@ -1,11 +1,16 @@
 #!/bin/perl
 
+
 #########################################################################################
 #                                           #
 #   Input: List of Entrez UIDs (integer identifiers, e.g. PMID, GI, Gene ID)    #
 #   EFetch Output: Formatted data records (e.g. abstracts, FASTA)           #
 #                                           #
 #########################################################################################
+
+
+# TODO ->  add option for format
+
 
 use LWP::Simple;
 use strict;
@@ -26,8 +31,6 @@ my $cpu = Sys::CPU::cpu_count();
 #                  #
 ####################
 
-
-# TODO ->  add option for format
 # https://www.ncbi.nlm.nih.gov/books/NBK25499/table/chapter4.T._valid_values_of__retmode_and/?report=objectonly
 
 # Default values
@@ -36,6 +39,7 @@ my $output;
 my $type;
 my $split;
 my $nproc = $cpu;  # all cpu
+my $retmax = 500;  # size of batch to download at once
 my $help;
 my $man;
 
@@ -45,6 +49,7 @@ GetOptions(
     'type|t=s' => \$type,  # string
     'split|s' => \$split, # flag
     'nproc|n=i' => \$nproc,  # integer
+    'block|b=i' => \$retmax,
     'help|h' => \$help,
     'man' => \$man) or pod2usage(2);
 
@@ -65,8 +70,8 @@ if ( !(defined($input)) or !(defined($output)) or !(defined($type)) )
     pod2usage(1);
 }
 
-#check if sequence is good
-if ( ($type ne "protein") && ($type ne "nucleotide") )
+#check if database type is good
+if ($type ne ("protein" || "nucleotide"))
 {
     print "Sequence type must be either 'protein' or 'nucleotide'\n";
     exit;
@@ -79,17 +84,9 @@ if ($split)
     closedir($dir_fh);
 }
 
-
 #Set $db
 my $db;
-if ( $type eq "protein" )
-{
-    $db = $type;
-}
-else
-{
-    $db = "nuccore";
-}
+if ($type eq "protein") {$db = $type;} else {$db = "nuccore";}
 
 
 ##################
@@ -101,8 +98,8 @@ else
 
 #Open the input file, in read-only mode
 open(my $infilehandle, "<", $input) or die "Error opening $input: $!\n";
-
 my @query;
+
 if ($split)
 {
     while(my $line = <$infilehandle>)
@@ -119,7 +116,7 @@ else
     my $counter = 0;
     my $string;
 
-   #Retrieve data in batches of 200
+   #Retrieve data in batches of $retmax
     #create array with file
     while(my $line = <$infilehandle>)
     {
@@ -129,7 +126,7 @@ else
 
         $counter += 1;
 
-        if ($counter < 200)
+        if ($counter < $retmax)
         {
             $string .= $line . ",";
         }
@@ -161,11 +158,11 @@ close ($infilehandle);
 ####################
 
 
-print "\n\nParallel downloading using $nproc slots (if required)...\n\n";
+print "Downloading using $nproc slots:\n";
 
 my $pm = new Parallel::ForkManager($nproc);
 
-#Retrieve data in batches of 200
+#Retrieve data in batches of $retmax
 my $size = @query;
 my $i = 0;
 
@@ -176,10 +173,10 @@ if($split)
 {
     foreach my $entry (@query)
     {
-        # select(undef,undef,undef, .3); #300 millisecond delay
-        sleep(1);  # max 3 requests per seconds for ncbi
+        select(undef, undef, undef, 0.3); # sleep 0.3s
+        # sleep(1);  # max 3 requests per seconds for ncbi
         $i += 1;
-        print "$i/$size\n";  # Display which block of 200 sequences is being downloaded
+        print "\r$i/$size";  # Display which block of 500 sequences is being downloaded
 
         my $pid = $pm->start and next;
 
@@ -204,10 +201,10 @@ else
 
     foreach my $entry (@query)
     {
-        # select(undef,undef,undef, .3); #300 millisecond delay
-        sleep(1);  # max 3 requests per seconds for ncbi
+        select(undef, undef, undef, 0.3); # sleep 0.3s
+        # sleep(1);  # max 3 requests per seconds for ncbi
         $i += 1;
-        print "$i/$size\n";  # Display which block of 200 sequences is being downloaded
+        print "\r$i/$size";  # Display which block of $retmax sequences is being downloaded
         my $pid = $pm->start and next;
 
         # my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=gp&retmode=text";  # GenPept
@@ -221,7 +218,6 @@ else
     }
     close ($output_fh);
 }
-
 
 print ("\nDone!\n");
 
@@ -266,9 +262,15 @@ Only one type at the time is supported. Mandatory
 Write an individual file for each accession number.
 Default writes all sequences in a single file. Optional
 
+=item B<--block [-b]>
+
+Size of block (number of sequences).
+Default is 500. Optional
+
 =item B<--nproc [-n]>
 
-Number of block of 200 sequences downloaded in parallel.
+Maximum number of block of sequences to downloaded in parallel.
+A new block is downloaded every 300 millisecond to respect NCBI's terms.
 Default is equal to number of CPUs available. Optional
 
 =back
@@ -284,4 +286,3 @@ Only one sequence type is allowed, i.e. nucleotide or protein.
 Perl dependencies: Parallel::ForkManager, Sys::CPU    
 
 =cut
-
