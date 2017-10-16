@@ -88,12 +88,12 @@ open(OUT, ">", $outfile) || die "Can't open file!\n";
 
 #progress bar
 print "\n\nDownloading list of accessions\n\n";
-my $progress = Term::ProgressBar->new($count);
 
 # https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&WebEnv=NCID_1_2591324_130.14.22.215_9001_1469634077_1008305355_0MetA0_S_MegaStore_F_1&query_key=1&&retmax=500&&rettype=acc
 #create all the URLs to retrieve and store them in an array
 #retrieve data in batches of 200
 my $retmax = 500;
+my $progress = Term::ProgressBar->new($count/$retmax);
 for (my $retstart = 0; $retstart < $count; $retstart += $retmax) {
         my $efetch_url = $base ."efetch.fcgi?db=$db&WebEnv=$web";
         $efetch_url .= "&query_key=$key&retstart=$retstart";
