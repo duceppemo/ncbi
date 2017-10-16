@@ -9,11 +9,13 @@
 
 
 use LWP::Simple;
-use Term::ProgressBar;
+use Sys::CPU;
+use Parallel::ForkManager;
 
 use strict;
 use warnings;
 use diagnostics;
+
 use Data::Dumper;
 
 use Getopt::Long;
@@ -81,34 +83,62 @@ my $web = $1 if ($output =~ /<WebEnv>(\S+)<\/WebEnv>/);
 my $key = $1 if ($output =~ /<QueryKey>(\d+)<\/QueryKey>/);
 my $count = $1 if ($output =~ /<Count>(\d+)<\/Count>/);
 
-print "There is $count $db accessions for $query";
+print "\nThere is $count $db accessions for: $query";
 
 #open output file for writing
 open(OUT, ">", $outfile) || die "Can't open file!\n";
 
 #progress bar
-print "\n\nDownloading list of accessions\n\n";
+print "Downloading list of accessions:\n";
 
 # https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&WebEnv=NCID_1_2591324_130.14.22.215_9001_1469634077_1008305355_0MetA0_S_MegaStore_F_1&query_key=1&&retmax=500&&rettype=acc
 #create all the URLs to retrieve and store them in an array
-#retrieve data in batches of 200
+#retrieve data in batches of 500
 my $retmax = 500;
-my $progress = Term::ProgressBar->new($count/$retmax);
+my @URLs;
 for (my $retstart = 0; $retstart < $count; $retstart += $retmax) {
         my $efetch_url = $base ."efetch.fcgi?db=$db&WebEnv=$web";
         $efetch_url .= "&query_key=$key&retstart=$retstart";
         $efetch_url .= "&retmax=$retmax&rettype=acc&retmode=text";
-        my $efetch_out = get($efetch_url);
-        print OUT "$efetch_out";
         
-        #update progress bar
-        $progress->update($_);
+        push(@URLs, $efetch_url);
 }
+
+#Use parallel loop to download multple URLs at the same time
+# Max 3 download per second (NCBI term of use)
+
+#Prepare for parallel loop
+my $number_of_cpus = Sys::CPU::cpu_count();
+my $MAX_PROCESSES = $number_of_cpus;
+my $pm = Parallel::ForkManager->new($MAX_PROCESSES);
+
+my $cnt = 0;
+$pm->run_on_finish(
+    sub { my ($pid, $exit_code, $ident) = @_;
+        $cnt += $retmax;
+      print "\r$cnt/$count";  #just update the line
+    }
+);
+
+foreach my $link (@URLs)
+{
+    select(undef, undef, undef, 0.3); # sleep 0.3s
+    $pm-> start and next; # Forks and returns the pid for the child
+        
+    # my $efetch_out = get($link);
+    # if ($efetch_out) { print OUT $efetch_out; }
+    # else { print "Could not download accessions from $link\n"; }
+    my $efetch_out;
+    while (!$efetch_out) { $efetch_out = get($link) }
+    print OUT $efetch_out;
+    
+    $pm->finish; # terminate the child process
+}
+$pm->wait_all_children;
 
 close OUT;
 
-print ("\ndone\n");
-
+print ("Done\n");
 
 __END__
 =head1 NAME
