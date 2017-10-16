@@ -1,10 +1,10 @@
 #!/bin/perl
 
 #########################################################################################
-#											#
-#	Input: List of Entrez UIDs (integer identifiers, e.g. PMID, GI, Gene ID)	#
-#	EFetch Output: Formatted data records (e.g. abstracts, FASTA)			#
-#											#
+#                                            #
+#    Input: List of Entrez UIDs (integer identifiers, e.g. PMID, GI, Gene ID)    #
+#    EFetch Output: Formatted data records (e.g. abstracts, FASTA)            #
+#                                            #
 #########################################################################################
 
 use LWP::Simple;
@@ -36,20 +36,20 @@ my $string;
 #create array with file
 while(my $line = <$infilehandle>)
 {
-	$counter += 1;
-	chomp($line);
-	if ($counter < 200)
-	{
-		$string .= $line . ",";
-	}
-	else
-	{
-		$string .= $line;
-		push(@query, $string);
-		$counter = 0;
-		$string = "";
-	}
-	
+    $counter += 1;
+    chomp($line);
+    if ($counter < 200)
+    {
+        $string .= $line . ",";
+    }
+    else
+    {
+        $string .= $line;
+        push(@query, $string);
+        $counter = 0;
+        $string = "";
+    }
+    
 }
 
 #remainig IDs
@@ -75,12 +75,12 @@ my $progress = Term::ProgressBar->new($nQuery);
 #retrieve data in batches of 200
 foreach my $entry (@query)
 {
-	#my $efetch_url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=$db&id=$entry&rettype=gp&retmode=text";# GenPept
-	my $efetch_url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=$db&id=$entry&rettype=fasta&retmode=text";# fasta
-	#my $efetch_url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=$db&id=$entry";#&rettype=fasta&retmode=text";# ASN.1
-	my $efetch_out = get($efetch_url);
-	print OUT "$efetch_out";
-	$progress->update($_);
+    #my $efetch_url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=$db&id=$entry&rettype=gp&retmode=text";# GenPept
+    my $efetch_url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=$db&id=$entry&rettype=fasta&retmode=text";# fasta
+    #my $efetch_url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=$db&id=$entry";#&rettype=fasta&retmode=text";# ASN.1
+    my $efetch_out = get($efetch_url);
+    print OUT "$efetch_out";
+    $progress->update($_);
 }
 close OUT;
 
