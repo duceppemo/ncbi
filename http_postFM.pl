@@ -21,6 +21,7 @@ use Data::Dumper;
 use Getopt::Long;
 use Pod::Usage;
 use Sys::CPU;
+use File::Path qw(make_path);
 
 my $cpu = Sys::CPU::cpu_count();
 
@@ -67,21 +68,26 @@ pod2usage(-exitval => 0, -verbose => 2) if $man;
 #check if mandatory arguments are not empty
 if ( !(defined($input)) or !(defined($output)) or !(defined($type)) )
 {
+    print("Missing madatory arguments!\n");
     pod2usage(1);
 }
 
 #check if database type is good
-if ($type ne ("protein" || "nucleotide"))
+if ($type ne ('nucleotide' || 'protien'))
 {
     print "Sequence type must be either 'protein' or 'nucleotide'\n";
-    exit;
+    pod2usage(1);
 }
 
 # check is correct ouptut
 if ($split)
 {
-    opendir(my $dir_fh, $output) or die "Output directory does not exist: $!\n";
-    closedir($dir_fh);
+    eval { make_path($output) };
+    if ($@) {
+      print "Couldn't create $output: $@";
+    }
+    # opendir(my $dir_fh, $output) or die "Output directory does not exist: $!\n";
+    # closedir($dir_fh);
 }
 
 #Set $db
@@ -286,3 +292,4 @@ Only one sequence type is allowed, i.e. nucleotide or protein.
 Perl dependencies: Parallel::ForkManager, Sys::CPU    
 
 =cut
+
