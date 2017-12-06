@@ -58,15 +58,15 @@ pod2usage(-exitval => 0, -verbose => 2) if $man;
 # check if valid database
 if ($db ne ("nucleotide" || "protein" ))
 {
-    print("Invalid database\n")
-    pod2usage(1)
+    print("Invalid database\n");
+    pod2usage(1);
 }
 
 #check if arguments are not empty
 if (!defined($db) || !defined($query) || !defined($outfile))
 {
-    print("Required field missing\n")
-    pod2usage(1)
+    print("Required field missing\n");
+    pod2usage(1);
 }
 
 
