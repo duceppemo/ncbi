@@ -33,7 +33,9 @@ Optional flags:
     -a          Assembly level restriction (Chromosome, Complete Genome, Contig, Scaffold)
                 Choose only one. Not using this option will download all assembly levels
 
-    -u          Uncompress all downloaded files\
+    -u          Uncompress all downloaded files
+
+    -n          Number of cpu (number of parallel download). Default all available cores\
 "
 exit 1
 }
@@ -48,8 +50,9 @@ list=""
 rename=0
 level="all"
 uncompress=0
+cpu="$(nproc)"
 
-options=':q:o:t:rul:a:h'
+options=':q:o:t:rul:a:n:h'
 
 while getopts "$options" opt; do
     case "$opt" in
@@ -57,6 +60,7 @@ while getopts "$options" opt; do
         t) export db="$OPTARG";;
         o) export out="$OPTARG";;
         l) export list="$OPTARG";;
+        n) export cpu="$OPTARG";;
         a) level="$OPTARG";;
         r) rename=1;;
         u) uncompress=1;;
@@ -103,6 +107,14 @@ if [ "$db" == "refseq" ] || [ "$db" == "assemblies" ]; then
 else
     echo "\"-t\" option is madatory and should be \"refseq\" or \"assemblies\""
     print_help
+fi
+
+# Check if number of core is exceding number of cores available
+if [ "$cpu" ]; then
+    if [ "$cpu" -gt "$(nproc)" ]; then
+        echo "Number of cores entered ("$cpu") excedes total number of cores available ("$(nproc)")"
+        print_help
+    fi
 fi
 
 # <FtpPath_GenBank>ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/009/445/GCA_000009445.1_ASM944v1</FtpPath_GenBank>
@@ -171,11 +183,13 @@ if [ "$assembly_level" != "all" ]; then  #Get only selected assembly levels
                 --env search_all \
                 --env db \
                 --env assembly_level \
+                --jobs "$cpu" \
                 'search_all {}' \
             | parallel \
                 --bar \
                 --env out \
                 --delay 0.3 \
+                --jobs "$cpu" \
                 'wget -P $out {} 2> /dev/null'
     fi
 else  # Get all sequences
@@ -193,6 +207,7 @@ else  # Get all sequences
                 --bar \
                 --env out \
                 --delay 0.3 \
+                --jobs "$cpu" \
                 'wget -P $out {} 2> /dev/null'
     else
         # make function available to parallel
@@ -204,11 +219,13 @@ else  # Get all sequences
                 --env search_some \
                 --env db \
                 --env assembly_level \
+                --jobs "$cpu" \
                 'search_some {}' \
             | parallel \
                 --bar \
                 --env out \
                 --delay 0.3 \
+                --jobs "$cpu" \
                 'wget -P $out {} 2> /dev/null'
     fi
             
@@ -243,7 +260,7 @@ if [ "$rename" -eq 1 ]; then
     export -f rename
 
     find "$out" -type f -name "*_genomic.fna.gz" \
-        | parallel --env rename 'rename {}'
+        | parallel --env rename --jobs "$cpu" 'rename {}'
 fi
 
 # | sed   -e 's/genome assembly//' \
@@ -264,7 +281,5 @@ fi
 if [ "$uncompress" -eq 1 ]; then
     echo "Decompressing files..."
     find "$out" -type f -name "*fna.gz" \
-        | parallel --bar 'pigz -d {}'
+        | parallel --bar --jobs "$cpu" 'pigz -d {}'
 fi
-
-
