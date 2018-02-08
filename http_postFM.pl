@@ -73,7 +73,7 @@ if ( !(defined($input)) or !(defined($output)) or !(defined($type)) )
 }
 
 #check if database type is good
-if ($type ne ('nucleotide' || 'protien'))
+if ($type ne ('nucleotide' && 'protien'))
 {
     print "Sequence type must be either 'protein' or 'nucleotide'\n";
     pod2usage(1);
