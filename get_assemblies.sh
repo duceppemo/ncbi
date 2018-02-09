@@ -98,12 +98,20 @@ if [ -n "$list" ]; then
     if [ ! -s "$list" ]; then
         echo "The list file provided is no valid"
         print_help
+    # else
+    #     echo "Downloading accessions from $(basename "$list")..."
     fi
 fi
 
 # Check if good database type entered
-if [ "$db" == "refseq" ] || [ "$db" == "assemblies" ]; then
+if [ "$db" == "refseq" ] && [ -n "$query" ]; then
     echo "Downloading "$query" "$level" sequences from "$db"..."
+elif [ "$db" == "assemblies" ] && [ -n "$query" ]; then
+    echo "Downloading "$query" "$db"..."
+elif [ "$db" == "refseq" ] && [ -n "$list" ]; then
+    echo "Downloading "$db" sequences from provided list..."
+elif [ "$db" == "assemblies" ] && [ -n "$list" ]; then
+    echo "Downloading "$db" from provided list..."
 else
     echo "\"-t\" option is madatory and should be \"refseq\" or \"assemblies\""
     print_help
@@ -246,12 +254,13 @@ if [ "$rename" -eq 1 ]; then
                     -e 's/cont.*//' \
                     -e 's/genomic.*//' \
                     -e 's/scaffold.*//' \
-                    -e 's/chrom.*//' \
-                    -e 's/Chrom.*//' \
+                    -e 's/_chrom.*//' \
+                    -e 's/_Chrom.*//' \
                     -e 's/_$//' \
                     -e 's/_=.*//' \
                     -e 's/_NODE.*//' \
                     -e 's/_genome_assembly//' \
+                    -e 's/_DNA//' \
                     -e 's/_complete_genome//')
 
         mv "$1" "${path}"/"${new_name}".fna.gz
