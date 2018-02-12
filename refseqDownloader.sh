@@ -30,7 +30,7 @@ function displayHelp()
 
         -h          Print this help message.
 
-        -n          Organism name(s) to keep.
+        -q          Query. Organism name(s) to keep.
                     Comma separated with no space if multiple (e.g. "Listeria monocytogenes,Campylobacter,Salmonella").
                     Not using this option will download all species of the selected database type.
 
@@ -38,11 +38,17 @@ function displayHelp()
                     Comma separated with no space if multiple (e.g. "Complete Genome,Scaffold").
                     Not using this option will download all assembly levels of the selected database type.
 
-        -r          Rename files according to description.
+        -r          Rename files according to description in fna file.
+                    "fna" file type must be selected to enable renaming.
 
         -u          Uncompress all downloaded files.
 
-        -j          Just fna.
+        -f          File type(s) to download(fna, ffn, gff).
+                    Comma separated with no space if multiple (e.g. "fna,ffn,gff").
+                    Not using this option will download all three file types.
+
+        -n          Number of CPUs to use for parallel download.
+                    Default is max numbers of CPUs avaiable.
     "
 }
 
@@ -57,7 +63,8 @@ name=''
 level=''
 uncompress=0
 rename=0
-just_fna=0
+export seq_type='fna,ffn,gff'
+export cpu=$(nproc)
 help=''
 
 
@@ -65,57 +72,54 @@ help=''
 # which would normally be nonsense because there's no option letter preceding it,
 # getopts switches to "silent error reporting mode"
 # When you want getopts to expect an argument for an option, just place a : (colon) after the proper option flag
-options=':t:o:n:l:ujrh'
+options=':t:o:n:l:uf:rq:h'
 
 while getopts "$options" opt; do
     case "$opt" in
-        t)
-            db_type="$OPTARG"
-            ;;
-        o)
-            export output="$OPTARG"
-            ;;
-        n)
-            name="$OPTARG"
-            ;;
-        l)
-            level="$OPTARG"
-            ;;
-        h)
-            displayHelp
+        t)  db_type="$OPTARG";;
+        o)  export output="$OPTARG";;
+        q)  name="$OPTARG";;
+        l)  level="$OPTARG";;
+        h)  displayHelp
             exit 1
             ;;
-        r)
-            rename=1
-            ;;
-        u)
-            uncompress=1
-            ;;
-        j)
-            just_fna=1
-            ;;
-        \?)
-            printf ""${BLUE}"Invalid option: -"$OPTARG"\n\n"${NC}"" >&2
+        r)  rename=1;;
+        u)  uncompress=1;;
+        f)  seq_type="$OPTARG";;
+        n) export cpu="$OPTARG";;
+        \?) printf ""${BLUE}"Invalid option: -"$OPTARG"\n\n"${NC}"" >&2
             # echo "Invalid option: -"$OPTARG"" >&2
             displayHelp
-            exit 1
-            ;;
-        :)
-            printf ""${BLUE}"Option -"$OPTARG" requires an argument.\n\n"${NC}"" >&2
+            exit 1;;
+        :)  printf ""${BLUE}"Option -"$OPTARG" requires an argument.\n\n"${NC}"" >&2
             # echo "Option -"$OPTARG" requires an argument." >&2
             displayHelp
-            exit 1
-            ;;
+            exit 1;;
     esac
 done
 
 shift $(($OPTIND - 1))
 
-# Exit if option flags b or v are missing
+# check mandatary flags and arguments
 if [[ -z "$db_type" ]] || [[ -z "$output" ]]; then
     echo "Both \"-t\" and \"-o\" options are mandatory and require arguments"
     displayHelp
     exit 1
+fi
+
+#test file type to get
+if [[ -z $(echo "$seq_type" | grep -E "fna|faa|gff") ]]; then
+    echo "Please options are mandatory and require arguments"
+    displayHelp
+    exit 1
+fi
+
+# Check if number of core is exceding number of cores available
+if [ "$cpu" ]; then
+    if [ "$cpu" -gt "$(nproc)" ]; then
+        echo "Number of cores entered ("$cpu") excedes total number of cores available ("$(nproc)")"
+        print_help
+    fi
 fi
 
 
@@ -149,13 +153,13 @@ else
 
     #create a time stamp to track the time of download
     downloadDate=$(date +%Y-%m-%d)
-    summary_file=""${output}"/"${downloadDate}"_assembly-summary_"${db_type}".txt"
+    [ -e "${output}"/"${db_type}"_"${downloadDate}".txt ] && rm "${output}"/"${db_type}"_"${downloadDate}".txt
+    touch "${output}"/"${db_type}"_"${downloadDate}".txt
 
-    if [ ! -s "$summary_file" ]; then
-        #Download the refseq assembly summary file
-        echo -e "Downloading \"assembly_summary.txt\" for "$db_type" from NCBI..."
-        curl -# "$summary_url" > "$summary_file"
-    fi
+    #Download the refseq assembly summary file
+    cd "$output"
+    wget --timestamp "$summary_url" -q --show-progress #-P "$output"
+    summary_file=""${output}"/assembly_summary.txt"
 fi
 
 
@@ -168,7 +172,7 @@ fi
 
 levels=''
 
-#make sure "Complete Genome" is treated a a single array element
+#make sure "Complete Genome" is treated as a single array element
 levels=($(echo "$level" | tr " " "_" | tr "," " "))
 
 #check if correct assembly level term used
@@ -233,56 +237,66 @@ else
     exit 1
 fi
 
-# Create ouput subfolders
-[ -d "${output}"/fna ] || mkdir -p "${output}"/fna
-if [ $just_fna -eq 0 ]; then
-    [ -d "${output}"/ffn ] || mkdir -p "${output}"/ffn
-    [ -d "${output}"/gff ] || mkdir -p "${output}"/gff
-fi
+#file types
+seq_types=''
+seq_types=($(echo "$seq_type" | tr "," " "))  # convert string to array
+
+#check if correct sequence type terms are being used
+for t in "${seq_types[@]}"; do
+    ty=''
+
+    case "$t" in  # indirect variable expansion
+        fna)    ty="$t"
+                [ -d "${output}"/fna ] || mkdir -p "${output}"/fna
+                ;;
+        ffn)    ty="$t"
+                [ -d "${output}"/ffn ] || mkdir -p "${output}"/ffn
+                ;;
+        gff)    ty="$t"
+                [ -d "${output}"/gff ] || mkdir -p "${output}"/gff
+                ;;
+    esac
+
+    if [ -z "$ty" ]; then
+        echo "Invalid sequence type \""$t"\""
+        displayHelp
+        exit 1
+    fi
+done
+
+function check_target()
+{
+    if [[ $(wget -S --spider $1  2>&1 | grep 'HTTP/1.1 200 OK') ]]; then 
+        echo "true"
+    fi
+}
 
 # Fucntion to parallel download
 function download()
 {
+    s_types=($(echo "$seq_type" | tr "," " "))
     fileName=$(basename "$1")
 
     #Determine which files to download
-    fna="/"${fileName}"_genomic.fna.gz"
-    #Create the full file path
-    fnaDownload=$(echo "$1" | awk -v var="$fna" '{print $0var}')
-    #check if already downloaded. if not, download.
-    [ -s "${output}"/"${fileName}".fna.gz ] || curl -s "$fnaDownload" > "${output}"/fna/"${fileName}".fna.gz
-
-    if [ $just_fna -eq 0 ]; then
-        ffn="/"${fileName}"_cds_from_genomic.fna.gz"
-        gff="/"${fileName}"_genomic.gff.gz"
-
-        gffDownload=$(echo "$1" | awk -v var="$gff" '{print $0var}')
-        ffnDownload=$(echo "$1" | awk -v var="$ffn" '{print $0var}')
-
-        [ -s "${output}"/"${fileName}".ffn.gz ] || curl -s "$ffnDownload" > "${output}"/ffn/"${fileName}".ffn.gz
-        [ -s "${output}"/"${fileName}".gff.gz ] || curl -s "$gffDownload" > "${output}"/gff/"${fileName}".gff.gz
-    fi
-
-    #rename the file with the organism name from the fasta header
-    if [ "$rename" -eq 1 ]; then
-        org=$(zcat "${output}"/fna/"${fileName}".fna.gz \
-            | head -n 1 \
-            | cut -d " " -f 2- \
-            | cut -d "," -f 1 \
-            | sed   -e "s%'\|(\|)\|\.%%g" \
-                    -e 's/ genome//' \
-                    -e 's/ chromosome//' \
-                    -e 's/ complete genome//' \
-                    -e 's/ chromosome sequence//' \
-            | tr " " "_" \
-            | tr "/" "_")
-
-        mv "${output}"/fna/"${fileName}".fna.gz "${output}"/fna/"${org}".fna.gz
-        if [ $just_fna -eq 0 ]; then
-            mv "${output}"/ffn/"${fileName}".ffn.gz "${output}"/ffn/"${org}".ffn.gz
-            mv "${output}"/gff/"${fileName}".gff.gz "${output}"/gff/"${org}".gff.gz
-        fi
-    fi
+    for t in "${s_types[@]}"; do
+        case "$t" in  # indirect variable expansion
+            fna)    fna="/"${fileName}"_genomic.fna.gz"
+                    fnaDownload=$(echo "$1" | awk -v var="$fna" '{print $0var}')  #Create the full file path
+                    [ -s "${output}"/"${fileName}".fna.gz ] || curl -s "$fnaDownload" \
+                        > "${output}"/fna/"${fileName}".fna.gz #check if already downloaded. if not, download.
+                    ;;
+            ffn)    ffn="/"${fileName}"_cds_from_genomic.fna.gz"
+                    ffnDownload=$(echo "$1" | awk -v var="$ffn" '{print $0var}')
+                    [ -s "${output}"/"${fileName}".ffn.gz ] || curl -s "$ffnDownload" \
+                        > "${output}"/ffn/"${fileName}".ffn.gz
+                    ;;
+            gff)    gff="/"${fileName}"_genomic.gff.gz"
+                    gffDownload=$(echo "$1" | awk -v var="$gff" '{print $0var}')
+                    [ -s "${output}"/"${fileName}".gff.gz ] || curl -s "$gffDownload" \
+                        > "${output}"/gff/"${fileName}".gff.gz
+                    ;;
+        esac
+    done
 }
 
 #make function available to parallel
@@ -290,17 +304,64 @@ export -f download  # -f is to export functions
 
 # Download multiple refseq genomes in parallel
 cat "${output}"/completeGenomePaths.txt \
-    | parallel --bar \
-        --delay 0.3 \
-        --env download \
-        --env output \
-        'download {}'
+    | parallel  --bar \
+                --delay 0.3 \
+                --env download \
+                --env output \
+                --env seq_type \
+                --jobs "$cpu" \
+                'download {}'
+
+#remove empty files
+find "$output" -size 0 -type f ! -name "*.txt" -exec rm {} \;
+
+#rename the file with the organism name from the fasta header
+if [ "$rename" -eq 1 ] && [ $(ls "${output}"/fna | wc -l) -gt 1 ]; then
+    echo "Renaming files..."
+    function rename()
+    {
+        fileName=$(basename "$1")
+        name="${fileName%.fna.gz}"
+        path=$(dirname "$1")
+
+        new_name=$(zcat "$1" | grep -E "^>" | head -n 1 | cut -d " " -f 2- | cut -d "," -f 1 \
+            | tr " " "_" | tr "/" "_" | tr -d "(" | tr -d ")" | tr -d "." \
+            | sed   -e 's/contig.*//' \
+                    -e 's/Contig.*//' \
+                    -e 's/cont.*//' \
+                    -e 's/genomic.*//' \
+                    -e 's/scaffold.*//' \
+                    -e 's/_chrom.*//' \
+                    -e 's/_Chrom.*//' \
+                    -e 's/_$//' \
+                    -e 's/_=.*//' \
+                    -e 's/_NODE.*//' \
+                    -e 's/_genome_assembly//' \
+                    -e 's/_DNA//' \
+                    -e 's/_complete_genome//')
+
+        mv "$1" "${path}"/"${new_name}".fna.gz
+        [ -s "${output}"/ffn/"${name}".ffn.gz ] && mv "${output}"/ffn/"${name}".ffn.gz "${output}"/ffn/"${new_name}".ffn.gz
+        [ -s "${output}"/gff/"${name}".gff.gz ] && mv "${output}"/gff/"${name}".gff.gz "${output}"/gff/"${new_name}".gff.gz
+    }
+
+    export -f rename
+
+    find "$output" -type f -name "*.fna.gz" \
+        | parallel  --bar \
+                    --env rename \
+                    --env output \
+                    --jobs "$cpu" \
+                    'rename {}'
+fi
 
 # TODO -> create folder for each Genus or Species?
 
 #uncompress?
 if [ "$uncompress" -eq 1 ]; then
+    echo "Uncompressing files..."
     find "$output" -type f -name "*.gz" \
-        | parallel --bar \
-            'pigz -d {}'
+        | parallel  --bar \
+                    --jobs "$cpu" \
+                    'pigz -d {}'
 fi
