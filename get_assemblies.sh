@@ -50,7 +50,7 @@ list=""
 rename=0
 level="all"
 uncompress=0
-cpu="$(nproc)"
+export cpu=$(nproc)
 
 options=':q:o:t:rul:a:n:h'
 
@@ -119,7 +119,7 @@ fi
 
 # Check if number of core is exceding number of cores available
 if [ "$cpu" ]; then
-    if [ "$cpu" -gt "$(nproc)" ]; then
+    if [ "$cpu" -gt $(nproc) ]; then
         echo "Number of cores entered ("$cpu") excedes total number of cores available ("$(nproc)")"
         print_help
     fi
@@ -254,6 +254,7 @@ if [ "$rename" -eq 1 ]; then
                     -e 's/cont.*//' \
                     -e 's/genomic.*//' \
                     -e 's/scaffold.*//' \
+                    -e 's/_Scfld.*//' \
                     -e 's/_chrom.*//' \
                     -e 's/_Chrom.*//' \
                     -e 's/_$//' \
@@ -269,7 +270,10 @@ if [ "$rename" -eq 1 ]; then
     export -f rename
 
     find "$out" -type f -name "*_genomic.fna.gz" \
-        | parallel --env rename --jobs "$cpu" 'rename {}'
+        | parallel  --bar \
+                    --env rename \
+                    --jobs "$cpu" \
+                    'rename {}'
 fi
 
 # | sed   -e 's/genome assembly//' \
@@ -290,5 +294,7 @@ fi
 if [ "$uncompress" -eq 1 ]; then
     echo "Decompressing files..."
     find "$out" -type f -name "*fna.gz" \
-        | parallel --bar --jobs "$cpu" 'pigz -d {}'
+        | parallel  --bar \
+                    --jobs "$cpu" \
+                    'pigz -p 1 -d {}'
 fi
