@@ -331,6 +331,8 @@ if [ "$rename" -eq 1 ] && [ $(ls "${output}"/fna | wc -l) -gt 1 ]; then
                     -e 's/cont.*//' \
                     -e 's/genomic.*//' \
                     -e 's/scaffold.*//' \
+                    -e 's/_SCAFFOLD.*//' \
+                    -e 's/Scfld.*//' \
                     -e 's/_chrom.*//' \
                     -e 's/_Chrom.*//' \
                     -e 's/_$//' \
