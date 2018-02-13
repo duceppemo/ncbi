@@ -255,6 +255,7 @@ if [ "$rename" -eq 1 ]; then
                     -e 's/genomic.*//' \
                     -e 's/scaffold.*//' \
                     -e 's/_Scfld.*//' \
+                    -e 's/_SCAFFOLD.*//' \
                     -e 's/_chrom.*//' \
                     -e 's/_Chrom.*//' \
                     -e 's/_$//' \
