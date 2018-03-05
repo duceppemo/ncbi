@@ -40,7 +40,7 @@ my $output;
 my $type;
 my $split;
 my $nproc = $cpu;  # all cpu
-my $retmax = 500;  # size of batch to download at once
+my $retmax = 300;  # size of batch to download at once
 my $help;
 my $man;
 
@@ -73,7 +73,7 @@ if ( !(defined($input)) or !(defined($output)) or !(defined($type)) )
 }
 
 #check if database type is good
-if ($type ne ('nucleotide' || 'protein'))
+if ($type ne ("nucleotide" || "protein"))
 {
     print "Sequence type must be either 'protein' or 'nucleotide'\n";
     pod2usage(1);
@@ -194,6 +194,7 @@ if($split)
         # my $efetch_url = $base_url . "?db=$db&id=$entry";#&rettype=fasta&retmode=text";  # ASN.1
 
         my $efetch_out = get($efetch_url);
+        die "Could not get $efetch_url" unless defined $efetch_out;
         print {$output_fh} ("$efetch_out");
         close ($output_fh);
 
@@ -218,6 +219,7 @@ else
         # my $efetch_url = $base_url . "?db=$db&id=$entry";#&rettype=fasta&retmode=text";  # ASN.1
 
         my $efetch_out = get($efetch_url);
+        die "Could not get $efetch_url" unless defined $efetch_out;
         print {$output_fh} ("$efetch_out");
 
         $pm->finish; # Terminates the child process
@@ -271,7 +273,7 @@ Default writes all sequences in a single file. Optional
 =item B<--block [-b]>
 
 Size of block (number of sequences).
-Default is 500. Optional
+Default is 300. Optional
 
 =item B<--nproc [-n]>
 
@@ -292,4 +294,3 @@ Only one sequence type is allowed, i.e. nucleotide or protein.
 Perl dependencies: Parallel::ForkManager, Sys::CPU    
 
 =cut
-
