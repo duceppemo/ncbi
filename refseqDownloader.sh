@@ -18,7 +18,7 @@ function displayHelp()
 {
     echo -e "\
 
-    Usage: refseqDownloader.sh -t db_type -o output_folder [-n organism(s)] [-l assemmly_level(s)]
+    Usage: refseqDownloader.sh -t db_type -o output_folder [-q \"organism\"] [-l \"assemmly_level\"] -r -u -n 4
 
     Mandatory flags:
 
@@ -43,8 +43,8 @@ function displayHelp()
 
         -u          Uncompress all downloaded files.
 
-        -f          File type(s) to download(fna, ffn, gff).
-                    Comma separated with no space if multiple (e.g. "fna,ffn,gff").
+        -f          File type(s) to download(fna, ffn, gff, faa).
+                    Comma separated with no space if multiple (e.g. "fna,ffn,gff,faa").
                     Not using this option will download all three file types.
 
         -n          Number of CPUs to use for parallel download.
@@ -63,7 +63,7 @@ name=''
 level=''
 uncompress=0
 rename=0
-export seq_type='fna,ffn,gff'
+export seq_type='fna,ffn,gff,faa'
 export cpu=$(nproc)
 help=''
 
@@ -108,7 +108,7 @@ if [[ -z "$db_type" ]] || [[ -z "$output" ]]; then
 fi
 
 #test file type to get
-if [[ -z $(echo "$seq_type" | grep -E "fna|faa|gff") ]]; then
+if [[ -z $(echo "$seq_type" | grep -E "fna|faa|gff|faa") ]]; then
     echo "Please options are mandatory and require arguments"
     displayHelp
     exit 1
@@ -255,6 +255,9 @@ for t in "${seq_types[@]}"; do
         gff)    ty="$t"
                 [ -d "${output}"/gff ] || mkdir -p "${output}"/gff
                 ;;
+        faa)    ty="$t"
+                [ -d "${output}"/faa ] || mkdir -p "${output}"/faa
+                ;;
     esac
 
     if [ -z "$ty" ]; then
@@ -295,6 +298,11 @@ function download()
                     [ -s "${output}"/"${fileName}".gff.gz ] || curl -s "$gffDownload" \
                         > "${output}"/gff/"${fileName}".gff.gz
                     ;;
+            gff)    faa="/"${fileName}"_protein.faa.gz"
+                    faaDownload=$(echo "$1" | awk -v var="$faa" '{print $0var}')
+                    [ -s "${output}"/"${fileName}".faa.gz ] || curl -s "$faaDownload" \
+                        > "${output}"/faa/"${fileName}".faa.gz
+                    ;;
         esac
     done
 }
@@ -331,8 +339,6 @@ if [ "$rename" -eq 1 ] && [ $(ls "${output}"/fna | wc -l) -gt 1 ]; then
                     -e 's/cont.*//' \
                     -e 's/genomic.*//' \
                     -e 's/scaffold.*//' \
-                    -e 's/_SCAFFOLD.*//' \
-                    -e 's/Scfld.*//' \
                     -e 's/_chrom.*//' \
                     -e 's/_Chrom.*//' \
                     -e 's/_$//' \
@@ -345,6 +351,7 @@ if [ "$rename" -eq 1 ] && [ $(ls "${output}"/fna | wc -l) -gt 1 ]; then
         mv "$1" "${path}"/"${new_name}".fna.gz
         [ -s "${output}"/ffn/"${name}".ffn.gz ] && mv "${output}"/ffn/"${name}".ffn.gz "${output}"/ffn/"${new_name}".ffn.gz
         [ -s "${output}"/gff/"${name}".gff.gz ] && mv "${output}"/gff/"${name}".gff.gz "${output}"/gff/"${new_name}".gff.gz
+        [ -s "${output}"/faa/"${name}".faa.gz ] && mv "${output}"/faa/"${name}".faa.gz "${output}"/faa/"${new_name}".faa.gz
     }
 
     export -f rename
