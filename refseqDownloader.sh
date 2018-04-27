@@ -3,7 +3,7 @@
 
 # Script description:
 
-# This script will download ".fna" ".ffn" and ".gff", if availables, from NCBI RefSeq for a specific database.
+# This script will download ".fna" ".ffn", ".faa" and ".gff", if availables, from NCBI RefSeq for a specific database.
 # Assembly level and name filtering are also available as options.
 
 
@@ -298,7 +298,7 @@ function download()
                     [ -s "${output}"/"${fileName}".gff.gz ] || curl -s "$gffDownload" \
                         > "${output}"/gff/"${fileName}".gff.gz
                     ;;
-            gff)    faa="/"${fileName}"_protein.faa.gz"
+            faa)    faa="/"${fileName}"_protein.faa.gz"
                     faaDownload=$(echo "$1" | awk -v var="$faa" '{print $0var}')
                     [ -s "${output}"/"${fileName}".faa.gz ] || curl -s "$faaDownload" \
                         > "${output}"/faa/"${fileName}".faa.gz
