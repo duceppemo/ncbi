@@ -2,14 +2,11 @@
 
 
 #########################################################################################
-#                                           #
-#   Input: List of Entrez UIDs (integer identifiers, e.g. PMID, GI, Gene ID)    #
-#   EFetch Output: Formatted data records (e.g. abstracts, FASTA)           #
-#                                           #
+#                                                                                       #
+#   Input: List of Entrez UIDs (integer identifiers, e.g. PMID, GI, Gene ID)            #
+#   EFetch Output: Formatted data records (e.g. abstracts, FASTA)                       #
+#                                                                                       #
 #########################################################################################
-
-
-# TODO ->  add option for format
 
 
 use LWP::Simple;
@@ -22,8 +19,12 @@ use Getopt::Long;
 use Pod::Usage;
 use Sys::CPU;
 use File::Path qw(make_path);
+use version;
 
 my $cpu = Sys::CPU::cpu_count();
+
+# Version tracking
+our $VERSION = qv('0.2');
 
 
 ####################
@@ -38,6 +39,7 @@ my $cpu = Sys::CPU::cpu_count();
 my $input;
 my $output;
 my $type;
+my $requested;
 my $split;
 my $nproc = $cpu;  # all cpu
 my $retmax = 300;  # size of batch to download at once
@@ -47,6 +49,7 @@ my $man;
 GetOptions(
     'input|i=s' => \$input,  # string
     'output|o=s' => \$output,  # string
+    'requested|r=s' => \$requested, #string
     'type|t=s' => \$type,  # string
     'split|s' => \$split, # flag
     'nproc|n=i' => \$nproc,  # integer
@@ -66,28 +69,47 @@ pod2usage(-exitval => 0, -verbose => 2) if $man;
 
 
 #check if mandatory arguments are not empty
-if ( !(defined($input)) or !(defined($output)) or !(defined($type)) )
+if ( !(defined($input)) or !(defined($output)) or !(defined($type)) or !(defined($requested)))
 {
     print("Missing madatory arguments!\n");
     pod2usage(1);
 }
 
 #check if database type is good
-if ($type ne ("nucleotide" || "protein"))
+my %db_types;
+@db_types{qw{nucleotide protein}} = ();
+if (!exists $db_types{$type})
 {
     print "Sequence type must be either 'protein' or 'nucleotide'\n";
+    pod2usage(1);
+}
+
+#check if requested output type if OK
+my %requested_types;
+@requested_types{qw{fasta genbank}} = ();
+if (!exists $requested_types{$requested})
+{
+    print "Requested out file format should be 'fasta' or 'genbank'.\n";
     pod2usage(1);
 }
 
 # check is correct ouptut
 if ($split)
 {
+    #make sure user provided a folder
     eval { make_path($output) };
     if ($@) {
       print "Couldn't create $output: $@";
     }
     # opendir(my $dir_fh, $output) or die "Output directory does not exist: $!\n";
     # closedir($dir_fh);
+}
+
+# Check if split used with genbank requested output type
+if ( $requested eq "genbank" && !$split)
+{
+    print "The 'split' flag must be used when requested output format is 'genbank'.\n";
+    pod2usage(1);
 }
 
 #Set $db
@@ -185,15 +207,17 @@ if($split)
         print "\r$i/$size";  # Display which block of 500 sequences is being downloaded
 
         my $pid = $pm->start and next;
+        my $efetch_url;
+        my $ext;
 
+        SWITCH: {
+            # https://www.ncbi.nlm.nih.gov/books/NBK25499/table/chapter4.T._valid_values_of__retmode_and/?report=objectonly
+            if($requested eq "fasta") {$efetch_url = $base_url . "?db=$db&id=$entry&rettype=fasta&retmode=text"; $ext = ".fasta"; last SWITCH; }
+            if($requested eq "genbank") {$efetch_url = $base_url . "?db=$db&id=$entry&rettype=gb&retmode=text";  $ext = ".gbk"; last SWITCH; }
+        }
+        
         #open output file for writing
-        open(my $output_fh, ">", "$output/$entry.fasta") || die "Can't write to $output/$entry.fasta: $!\n";
-
-        # https://www.ncbi.nlm.nih.gov/books/NBK25499/table/chapter4.T._valid_values_of__retmode_and/?report=objectonly
-        # my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=gp&retmode=text";  # GenPept
-        # my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=fasta&retmode=text";  # fasta
-        my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=gb&retmode=text";  # GenBank flat file
-        # my $efetch_url = $base_url . "?db=$db&id=$entry";#&rettype=fasta&retmode=text";  # ASN.1
+        open(my $output_fh, ">", "$output/$entry$ext") || die "Can't write to $output/$entry.fasta: $!\n";
 
         my $efetch_out = get($efetch_url);
         die "Could not get $efetch_url" unless defined $efetch_out;
@@ -215,13 +239,17 @@ else
         $i += 1;
         print "\r$i/$size";  # Display which block of $retmax sequences is being downloaded
         my $pid = $pm->start and next;
+        my $efetch_url;
+        my $ext;
 
-
-        # https://www.ncbi.nlm.nih.gov/books/NBK25499/table/chapter4.T._valid_values_of__retmode_and/?report=objectonly
-        # my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=gp&retmode=text";  # GenPept
-        # my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=fasta&retmode=text";  # fasta
-        my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=gb&retmode=text";  # GenBank flat file
-        # my $efetch_url = $base_url . "?db=$db&id=$entry";#&rettype=fasta&retmode=text";  # ASN.1
+        SWITCH: {
+            # https://www.ncbi.nlm.nih.gov/books/NBK25499/table/chapter4.T._valid_values_of__retmode_and/?report=objectonly
+            if($requested eq "fasta") {$efetch_url = $base_url . "?db=$db&id=$entry&rettype=fasta&retmode=text"; $ext = ".fasta"; last SWITCH; }
+            if($requested eq "genbank") {$efetch_url = $base_url . "?db=$db&id=$entry&rettype=gb&retmode=text";  $ext = ".gbk"; last SWITCH; }
+        }
+        
+        #open output file for writing
+        open(my $output_fh, ">", "$output/$entry$ext") || die "Can't write to $output/$entry.fasta: $!\n";
 
         my $efetch_out = get($efetch_url);
         die "Could not get $efetch_url" unless defined $efetch_out;
@@ -269,6 +297,12 @@ Output folder in split mode. Mandatory
 
 Type of sequences in the list. "protein" or "nucleotide".
 Only one type at the time is supported. Mandatory
+
+=item B<--requested [-r]>
+
+Type of output requested. "fasta" or "genbank".
+Only one type at the time is supported. Mandatory
+"genbank" requires "split".
 
 =item B<--split [-s]>
 
