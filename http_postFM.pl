@@ -179,7 +179,7 @@ if($split)
 {
     foreach my $entry (@query)
     {
-        select(undef, undef, undef, 0.3); # sleep 0.3s
+        select(undef, undef, undef, 0.5); # sleep 0.3s
         # sleep(1);  # max 3 requests per seconds for ncbi
         $i += 1;
         print "\r$i/$size";  # Display which block of 500 sequences is being downloaded
@@ -189,8 +189,10 @@ if($split)
         #open output file for writing
         open(my $output_fh, ">", "$output/$entry.fasta") || die "Can't write to $output/$entry.fasta: $!\n";
 
+        # https://www.ncbi.nlm.nih.gov/books/NBK25499/table/chapter4.T._valid_values_of__retmode_and/?report=objectonly
         # my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=gp&retmode=text";  # GenPept
-        my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=fasta&retmode=text";  # fasta
+        # my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=fasta&retmode=text";  # fasta
+        my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=gb&retmode=text";  # GenBank flat file
         # my $efetch_url = $base_url . "?db=$db&id=$entry";#&rettype=fasta&retmode=text";  # ASN.1
 
         my $efetch_out = get($efetch_url);
@@ -208,14 +210,17 @@ else
 
     foreach my $entry (@query)
     {
-        select(undef, undef, undef, 0.3); # sleep 0.3s
+        select(undef, undef, undef, 0.5); # sleep 0.3s
         # sleep(1);  # max 3 requests per seconds for ncbi
         $i += 1;
         print "\r$i/$size";  # Display which block of $retmax sequences is being downloaded
         my $pid = $pm->start and next;
 
+
+        # https://www.ncbi.nlm.nih.gov/books/NBK25499/table/chapter4.T._valid_values_of__retmode_and/?report=objectonly
         # my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=gp&retmode=text";  # GenPept
-        my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=fasta&retmode=text";  # fasta
+        # my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=fasta&retmode=text";  # fasta
+        my $efetch_url = $base_url . "?db=$db&id=$entry&rettype=gb&retmode=text";  # GenBank flat file
         # my $efetch_url = $base_url . "?db=$db&id=$entry";#&rettype=fasta&retmode=text";  # ASN.1
 
         my $efetch_out = get($efetch_url);
