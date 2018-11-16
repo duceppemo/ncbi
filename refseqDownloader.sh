@@ -371,6 +371,6 @@ if [ "$uncompress" -eq 1 ]; then
     echo "Uncompressing files..."
     find "$output" -type f -name "*.gz" \
         | parallel  --bar \
-                    --jobs "$cpu" \
-                    'pigz -d {}'
+                    --jobs $((cpu/4)) \
+                    'pigz -p 4 -d {}'
 fi
