@@ -1,5 +1,6 @@
 #!/bin/bash
 
+version="0.1"
 
 # Script description:
 
@@ -44,7 +45,7 @@ function displayHelp()
         -u          Uncompress all downloaded files.
 
         -f          File type(s) to download(fna, ffn, gff, faa).
-                    Comma separated with no space if multiple (e.g. "fna,ffn,gff,faa").
+                    Comma separated with no space if multiple (e.g. "fna,ffn,gff,faa,gbk").
                     Not using this option will download all three file types.
 
         -n          Number of CPUs to use for parallel download.
@@ -57,16 +58,16 @@ function displayHelp()
 BLUE='\033[1;34m'
 NC='\033[0m' # No Color
 
+# Default values
 db_type=''
 export output=''
 name=''
 level=''
 uncompress=0
 rename=0
-export seq_type='fna,ffn,gff,faa'
+export seq_type=''  # 'fna,ffn,gff,faa,gbk'
 export cpu=$(nproc)
 help=''
-
 
 # If the very first character of the option-string is a : (colon),
 # which would normally be nonsense because there's no option letter preceding it,
@@ -86,7 +87,7 @@ while getopts "$options" opt; do
         r)  rename=1;;
         u)  uncompress=1;;
         f)  seq_type="$OPTARG";;
-        n) export cpu="$OPTARG";;
+        n)  export cpu="$OPTARG";;
         \?) printf ""${BLUE}"Invalid option: -"$OPTARG"\n\n"${NC}"" >&2
             # echo "Invalid option: -"$OPTARG"" >&2
             displayHelp
@@ -108,7 +109,7 @@ if [[ -z "$db_type" ]] || [[ -z "$output" ]]; then
 fi
 
 #test file type to get
-if [[ -z $(echo "$seq_type" | grep -E "fna|faa|gff|faa") ]]; then
+if [[ -z $(echo "$seq_type" | grep -E "fna|faa|gff|faa|gbk") ]]; then
     echo "Please options are mandatory and require arguments"
     displayHelp
     exit 1
@@ -169,8 +170,6 @@ fi
 #               #
 #################
 
-
-levels=''
 
 #make sure "Complete Genome" is treated as a single array element
 levels=($(echo "$level" | tr " " "_" | tr "," " "))
@@ -238,7 +237,6 @@ else
 fi
 
 #file types
-seq_types=''
 seq_types=($(echo "$seq_type" | tr "," " "))  # convert string to array
 
 #check if correct sequence type terms are being used
@@ -257,6 +255,9 @@ for t in "${seq_types[@]}"; do
                 ;;
         faa)    ty="$t"
                 [ -d "${output}"/faa ] || mkdir -p "${output}"/faa
+                ;;
+        gbk)    ty="$t"
+                [ -d "${output}"/gbk ] || mkdir -p "${output}"/gbk
                 ;;
     esac
 
@@ -292,6 +293,11 @@ function download()
                     ffnDownload=$(echo "$1" | awk -v var="$ffn" '{print $0var}')
                     [ -s "${output}"/"${fileName}".ffn.gz ] || curl -s "$ffnDownload" \
                         > "${output}"/ffn/"${fileName}".ffn.gz
+                    ;;
+            gbk)    gbk="/"${fileName}"_genomic.gbff.gz"
+                    gbkDownload=$(echo "$1" | awk -v var="$gbk" '{print $0var}')
+                    [ -s "${output}"/"${fileName}".gbk.gz ] || curl -s "$gbkDownload" \
+                        > "${output}"/gbk/"${fileName}".gbk.gz
                     ;;
             gff)    gff="/"${fileName}"_genomic.gff.gz"
                     gffDownload=$(echo "$1" | awk -v var="$gff" '{print $0var}')
@@ -352,6 +358,7 @@ if [ "$rename" -eq 1 ] && [ $(ls "${output}"/fna | wc -l) -gt 1 ]; then
         [ -s "${output}"/ffn/"${name}".ffn.gz ] && mv "${output}"/ffn/"${name}".ffn.gz "${output}"/ffn/"${new_name}".ffn.gz
         [ -s "${output}"/gff/"${name}".gff.gz ] && mv "${output}"/gff/"${name}".gff.gz "${output}"/gff/"${new_name}".gff.gz
         [ -s "${output}"/faa/"${name}".faa.gz ] && mv "${output}"/faa/"${name}".faa.gz "${output}"/faa/"${new_name}".faa.gz
+        [ -s "${output}"/gbk/"${name}".gbk.gz ] && mv "${output}"/gbk/"${name}".gbk.gz "${output}"/gbk/"${new_name}".gbk.gz
     }
 
     export -f rename
@@ -371,6 +378,6 @@ if [ "$uncompress" -eq 1 ]; then
     echo "Uncompressing files..."
     find "$output" -type f -name "*.gz" \
         | parallel  --bar \
-                    --jobs $((cpu/4)) \
-                    'pigz -p 4 -d {}'
+                    --jobs $((cpu/3)) \
+                    'pigz -p 3 -d {}'
 fi
