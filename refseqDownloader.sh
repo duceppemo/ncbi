@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version="0.1"
+version="0.2"
 
 # Script description:
 
@@ -208,21 +208,27 @@ if [ "$level" ]; then
 fi
 
 #if entered names to keep
-if [ -n "$name" ]; then
-    name_filter=$(echo "\""$name"\"" | tr "," "|")
-    # echo "$name_filter"
+if [[ -n "$name" ]]; then
+    name_filter=$(echo "'"$name"'" | tr "," "|")
 fi
+
+echo "$name_filter"
+
+# create a subset of assembly_summary using the name(s) supplied
+export filtered_summary="assembly_summary_filtered.txt"
+cmd1="cat "$summary_file" | grep -E "$name_filter" > "$filtered_summary""
+eval "$cmd1"
 
 # File with download paths
 if [ -n "$level" ] && [ -n "$name" ]; then
     echo "Downloading all "$level" sequences for "$name"..."
-    cmd="cat "$summary_file" | grep -E "$name_filter" | awk -F \"\\t\" '"$f" && \$11==\"latest\" {print \$20}' > "${output}"/completeGenomePaths.txt"
+    cmd="cat "$filtered_summary" | awk -F \"\\t\" '"$f" && \$11==\"latest\" {print \$20}' > "${output}"/completeGenomePaths.txt"
 elif [ -n "$level" ] && [ -z "$name" ]; then
     echo "Downloading all "$level" sequences for "$db_type"..."
     cmd="cat "$summary_file" | awk -F \"\\t\" '"$f" && \$11==\"latest\" {print \$20}' > "${output}"/completeGenomePaths.txt"
 elif [ -z "$level" ] && [ -n "$name" ]; then
     echo "Downloading all available sequences for "$name"..."
-    cmd="cat "$summary_file" | grep -E "$name_filter" | awk -F \"\\t\" '\$11==\"latest\" {print \$20}' > "${output}"/completeGenomePaths.txt"
+    cmd="cat "$filtered_summary" | awk -F \"\\t\" '\$11==\"latest\" {print \$20}' > "${output}"/completeGenomePaths.txt"
 else
     echo "Downloading all available sequences for "$db_type"..."
     cmd="cat "$summary_file" | awk -F \"\\t\" '\$11==\"latest\" {print \$20}' > "${output}"/completeGenomePaths.txt"
@@ -332,27 +338,16 @@ find "$output" -size 0 -type f ! -name "*.txt" -exec rm {} \;
 #rename the file with the organism name from the fasta header
 if [ "$rename" -eq 1 ] && [ $(ls "${output}"/fna | wc -l) -gt 1 ]; then
     echo "Renaming files..."
+
     function rename()
     {
-        fileName=$(basename "$1")
-        name="${fileName%.fna.gz}"
+        name=$(basename "${1%.fna.gz}")
         path=$(dirname "$1")
-
-        new_name=$(zcat "$1" | grep -E "^>" | head -n 1 | cut -d " " -f 2- | cut -d "," -f 1 \
-            | tr " " "_" | tr "/" "_" | tr -d "(" | tr -d ")" | tr -d "." \
-            | sed   -e 's/contig.*//' \
-                    -e 's/Contig.*//' \
-                    -e 's/cont.*//' \
-                    -e 's/genomic.*//' \
-                    -e 's/scaffold.*//' \
-                    -e 's/_chrom.*//' \
-                    -e 's/_Chrom.*//' \
-                    -e 's/_$//' \
-                    -e 's/_=.*//' \
-                    -e 's/_NODE.*//' \
-                    -e 's/_genome_assembly//' \
-                    -e 's/_DNA//' \
-                    -e 's/_complete_genome//')
+        
+        organism_name=$(cat "$filtered_summary" | grep "$name" | awk -F $'\t' 'BEGIN {OFS = FS} {print $8, $9}')
+        id=$(echo "$organism_name" | cut -f 1 | sed 's/str.*//' | tr " " "_" | tr -d ".")
+        strain=$(echo "$organism_name" | cut -f 2 | cut -d "=" -f 2 | tr " " "_")
+        new_name=$(echo ""${id}"_strain_"${strain}"" | sed 's/__/_/g')
 
         mv "$1" "${path}"/"${new_name}".fna.gz
         [ -s "${output}"/ffn/"${name}".ffn.gz ] && mv "${output}"/ffn/"${name}".ffn.gz "${output}"/ffn/"${new_name}".ffn.gz
@@ -366,9 +361,11 @@ if [ "$rename" -eq 1 ] && [ $(ls "${output}"/fna | wc -l) -gt 1 ]; then
     find "$output" -type f -name "*.fna.gz" \
         | parallel  --bar \
                     --env rename \
+                    --env filtered_summary \
                     --env output \
                     --jobs "$cpu" \
                     'rename {}'
+
 fi
 
 # TODO -> create folder for each Genus or Species?
