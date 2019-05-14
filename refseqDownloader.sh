@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version="0.2"
+version="0.2.1"
 
 # Script description:
 
@@ -207,17 +207,16 @@ if [ "$level" ]; then
     fi
 fi
 
+# create a subset of assembly_summary using the name(s) supplied
+export filtered_summary="assembly_summary_filtered.txt"
 #if entered names to keep
 if [[ -n "$name" ]]; then
     name_filter=$(echo "'"$name"'" | tr "," "|")
+    cmd1="cat "$summary_file" | grep -E "$name_filter" > "$filtered_summary""
+    eval "$cmd1"
+else
+    cp "$summary_file" "$filtered_summary"
 fi
-
-echo "$name_filter"
-
-# create a subset of assembly_summary using the name(s) supplied
-export filtered_summary="assembly_summary_filtered.txt"
-cmd1="cat "$summary_file" | grep -E "$name_filter" > "$filtered_summary""
-eval "$cmd1"
 
 # File with download paths
 if [ -n "$level" ] && [ -n "$name" ]; then
