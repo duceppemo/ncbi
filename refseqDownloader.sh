@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version="0.2.1"
+version="0.2.2"
 
 # Script description:
 
@@ -207,16 +207,17 @@ if [ "$level" ]; then
     fi
 fi
 
-# create a subset of assembly_summary using the name(s) supplied
-export filtered_summary="assembly_summary_filtered.txt"
 #if entered names to keep
 if [[ -n "$name" ]]; then
     name_filter=$(echo "'"$name"'" | tr "," "|")
-    cmd1="cat "$summary_file" | grep -E "$name_filter" > "$filtered_summary""
-    eval "$cmd1"
-else
-    cp "$summary_file" "$filtered_summary"
 fi
+
+echo "$name_filter"
+
+# create a subset of assembly_summary using the name(s) supplied
+export filtered_summary="assembly_summary_filtered.txt"
+cmd1="cat "$summary_file" | grep -E "$name_filter" > "$filtered_summary""
+eval "$cmd1"
 
 # File with download paths
 if [ -n "$level" ] && [ -n "$name" ]; then
@@ -340,13 +341,14 @@ if [ "$rename" -eq 1 ] && [ $(ls "${output}"/fna | wc -l) -gt 1 ]; then
 
     function rename()
     {
-        name=$(basename "${1%.fna.gz}")
+            gfc=$(basename "${1%.fna}")
+        name=$(echo "$gfc" | cut -d "_" -f 1,2 --output-delimiter="_")
         path=$(dirname "$1")
         
         organism_name=$(cat "$filtered_summary" | grep "$name" | awk -F $'\t' 'BEGIN {OFS = FS} {print $8, $9}')
         id=$(echo "$organism_name" | cut -f 1 | sed 's/str.*//' | tr " " "_" | tr -d ".")
         strain=$(echo "$organism_name" | cut -f 2 | cut -d "=" -f 2 | tr " " "_")
-        new_name=$(echo ""${id}"_strain_"${strain}"" | sed 's/__/_/g')
+        new_name=$(echo ""${name}"_"${id}"_strain_"${strain}"" | sed 's/__/_/g')
 
         mv "$1" "${path}"/"${new_name}".fna.gz
         [ -s "${output}"/ffn/"${name}".ffn.gz ] && mv "${output}"/ffn/"${name}".ffn.gz "${output}"/ffn/"${new_name}".ffn.gz
