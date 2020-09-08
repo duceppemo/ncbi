@@ -348,7 +348,7 @@ if [ "$rename" -eq 1 ] && [ $(ls "${output}"/fna | wc -l) -gt 1 ]; then
         organism_name=$(cat "$filtered_summary" | grep "$name" | awk -F $'\t' 'BEGIN {OFS = FS} {print $8, $9}')
         id=$(echo "$organism_name" | cut -f 1 | sed 's/str.*//' | tr " " "_" | tr -d ".")
         strain=$(echo "$organism_name" | cut -f 2 | cut -d "=" -f 2 | tr " " "_")
-        new_name=$(echo ""${name}"_"${id}"_strain_"${strain}"" | sed 's/__/_/g')
+        new_name=$(echo ""${name}"_"${id}"_strain_"${strain}"" | sed -e 's/__/_/g' -e 's%/%-%g')
 
         mv "$1" "${path}"/"${new_name}".fna.gz
         [ -s "${output}"/ffn/"${name}".ffn.gz ] && mv "${output}"/ffn/"${name}".ffn.gz "${output}"/ffn/"${new_name}".ffn.gz
