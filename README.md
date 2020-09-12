@@ -12,9 +12,9 @@ Dependencies (perl modules):
 
 usage: perl http_postFM.pl -h
 
-## trace_downloader.py
-A script to download assemblies from Shotgut sequencing projects on GenBank with accession numbers like `AABUZE000000000.2`.
+## ncbi_wgs_downloader.py
+A script to download assemblies from shotgut sequencing projects on GenBank with accession numbers like `AABUZE000000000.2`.
 
-usage: python3 trace_downloader.py <accession_list.txt> <download_folder/>
+usage: python3 ncbi_wgs_downloader.py <accession_list.txt> <download_folder/> <you_email@gmail.com>
 
-where `accession_list.txt` is a text file with one accession number per line and `download_folder/` is the directory where you want your fasta files to be downlaoded.
+where `accession_list.txt` is a text file with one accession number per line, `download_folder/` is the directory where you want your fasta files to be downlaoded and `your_email@gmail.com` is the email address you want to use for the handshake with ncbi server.
