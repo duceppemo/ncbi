@@ -10,7 +10,7 @@ Dependencies (perl modules):
 - Sys::CPU
 - Parallel::ForkManager
 ```
-conda create -n ncbi -c bioconda perl-app-cpanminus perl-sys-cpu perl-parallel-forkmanager
+conda create -n ncbi -c bioconda perl-lwp-simple perl-sys-cpu perl-parallel-forkmanager
 conda activate ncbi
 ```
 usage: perl http_postFM.pl -h
