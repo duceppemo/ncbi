@@ -9,7 +9,10 @@ Create proper documentation for the scripts (including dependencies etc.)
 Dependencies (perl modules):
 - Sys::CPU
 - Parallel::ForkManager
-
+```
+conda create -n ncbi -c bioconda perl-app-cpanminus perl-sys-cpu perl-parallel-forkmanager
+conda activate ncbi
+```
 usage: perl http_postFM.pl -h
 
 ## ncbi_wgs_downloader.py
