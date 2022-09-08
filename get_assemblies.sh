@@ -179,7 +179,7 @@ if [ "$assembly_level" != "all" ]; then  #Get only selected assembly levels
             | parallel \
                 --bar \
                 --env out \
-                --delay 0.3 \
+                --delay 1 \
                 'wget -P $out {} 2> /dev/null'
     else
         # make function available to parallel
@@ -187,7 +187,7 @@ if [ "$assembly_level" != "all" ]; then  #Get only selected assembly levels
 
         cat "$list" \
             | parallel \
-                --delay 0.3 \
+                --delay 1 \
                 --env search_all \
                 --env db \
                 --env assembly_level \
@@ -196,7 +196,7 @@ if [ "$assembly_level" != "all" ]; then  #Get only selected assembly levels
             | parallel \
                 --bar \
                 --env out \
-                --delay 0.3 \
+                --delay 1 \
                 --jobs "$cpu" \
                 'wget -P $out {} 2> /dev/null'
     fi
@@ -214,7 +214,7 @@ else  # Get all sequences
             | parallel \
                 --bar \
                 --env out \
-                --delay 0.3 \
+                --delay 1 \
                 --jobs "$cpu" \
                 'wget -P $out {} 2> /dev/null'
     else
@@ -223,7 +223,7 @@ else  # Get all sequences
 
         cat "$list" \
             | parallel \
-                --delay 0.3 \
+                --delay 1 \
                 --env search_some \
                 --env db \
                 --env assembly_level \
@@ -232,7 +232,7 @@ else  # Get all sequences
             | parallel \
                 --bar \
                 --env out \
-                --delay 0.3 \
+                --delay 1 \
                 --jobs "$cpu" \
                 'wget -P $out {} 2> /dev/null'
     fi
