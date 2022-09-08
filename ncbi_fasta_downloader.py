@@ -52,9 +52,9 @@ def fetch_wgs_contigs(accession):
         try:
             with open(output_fasta, 'w') as f:
                 f.write(handle.read())
-                # record = SeqIO.write(handle, f, "fasta")
                 handle.close()
-        # except urllib.error.HTTPError:
+                sleep(1)
+                print('DONE')
         except http.client.IncompleteRead:
             print('ERROR')
             error_acc_handle.write(accession + '\n')
