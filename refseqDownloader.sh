@@ -19,11 +19,11 @@ function displayHelp()
 {
     echo -e "\
 
-    Usage: refseqDownloader.sh -t db_type -o output_folder [-q \"organism\"] [-l \"assemmly_level\"] -r -u -n 4
+    Usage: refseqDownloader.sh -d db_type -o output_folder [-q \"organism\"] [-l \"assemmly_level\"] -r -u -n 4
 
     Mandatory flags:
 
-        -t          RefSeq database type (bacteria, archaea, viral, fungi, protozoa, vertebrate, plant, human).
+        -d          RefSeq database type (bacteria, archaea, viral, fungi, protozoa, vertebrate, plant, human).
 
         -o          Output folder. Where downloaded files will be located.
 
@@ -41,6 +41,8 @@ function displayHelp()
 
         -r          Rename files according to description in fna file.
                     "fna" file type must be selected to enable renaming.
+
+        -t          Download only type (representative) strains.
 
         -u          Uncompress all downloaded files.
 
@@ -63,6 +65,7 @@ db_type=''
 export output=''
 name=''
 level=''
+type=0
 uncompress=0
 rename=0
 export seq_type=''  # 'fna,ffn,gff,faa,gbk'
@@ -73,11 +76,11 @@ help=''
 # which would normally be nonsense because there's no option letter preceding it,
 # getopts switches to "silent error reporting mode"
 # When you want getopts to expect an argument for an option, just place a : (colon) after the proper option flag
-options=':t:o:n:l:uf:rq:h'
+options=':d:o:n:l:utf:rq:h'
 
 while getopts "$options" opt; do
     case "$opt" in
-        t)  db_type="$OPTARG";;
+        d)  db_type="$OPTARG";;
         o)  export output="$OPTARG";;
         q)  name="$OPTARG";;
         l)  level="$OPTARG";;
@@ -85,6 +88,7 @@ while getopts "$options" opt; do
             exit 1
             ;;
         r)  rename=1;;
+        t)  type=1;;
         u)  uncompress=1;;
         f)  seq_type="$OPTARG";;
         n)  export cpu="$OPTARG";;
@@ -215,9 +219,14 @@ fi
 echo "$name_filter"
 
 # create a subset of assembly_summary using the name(s) supplied
-export filtered_summary="assembly_summary_filtered.txt"
+export filtered_summary=""${output}"/assembly_summary_filtered.txt"
 cmd1="cat "$summary_file" | grep -E "$name_filter" > "$filtered_summary""
 eval "$cmd1"
+
+# create another subset if representive only was selected
+cmd2="cat "$filtered_summary" | grep -E 'representative genome' > "${filtered_summary}".tmp"
+eval "$cmd2"
+mv "${filtered_summary}".tmp "$filtered_summary"
 
 # File with download paths
 if [ -n "$level" ] && [ -n "$name" ]; then
