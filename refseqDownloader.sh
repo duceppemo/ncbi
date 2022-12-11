@@ -163,7 +163,7 @@ else
 
     #Download the refseq assembly summary file
     cd "$output"
-    wget --timestamp "$summary_url" -q --show-progress #-P "$output"
+    # wget --timestamp "$summary_url" -q --show-progress #-P "$output"
     summary_file=""${output}"/assembly_summary.txt"
 fi
 
@@ -212,21 +212,24 @@ if [ "$level" ]; then
 fi
 
 #if entered names to keep
+export filtered_summary=""${output}"/assembly_summary_filtered.txt"
 if [[ -n "$name" ]]; then
+    # create a subset of assembly_summary using the name(s) supplied
     name_filter=$(echo "'"$name"'" | tr "," "|")
+    echo "Filtering metadata using: "$name_filter""
+    cmd1="cat "$summary_file" | grep -E "$name_filter" > "$filtered_summary""
+    eval "$cmd1"
+else
+    mv "$summary_file" "$filtered_summary"
 fi
 
-echo "$name_filter"
-
-# create a subset of assembly_summary using the name(s) supplied
-export filtered_summary=""${output}"/assembly_summary_filtered.txt"
-cmd1="cat "$summary_file" | grep -E "$name_filter" > "$filtered_summary""
-eval "$cmd1"
-
 # create another subset if representive only was selected
-cmd2="cat "$filtered_summary" | grep -E 'representative genome' > "${filtered_summary}".tmp"
-eval "$cmd2"
-mv "${filtered_summary}".tmp "$filtered_summary"
+if [[ "$type" -eq 1 ]]; then
+    echo "Only keeping representative genomes"
+    cmd2="cat $filtered_summary | grep 'representative genome' > ${filtered_summary}.tmp"
+    eval "$cmd2"
+    mv "${filtered_summary}".tmp "$filtered_summary"
+fi
 
 # File with download paths
 if [ -n "$level" ] && [ -n "$name" ]; then
@@ -234,13 +237,13 @@ if [ -n "$level" ] && [ -n "$name" ]; then
     cmd="cat "$filtered_summary" | awk -F \"\\t\" '"$f" && \$11==\"latest\" {print \$20}' > "${output}"/completeGenomePaths.txt"
 elif [ -n "$level" ] && [ -z "$name" ]; then
     echo "Downloading all "$level" sequences for "$db_type"..."
-    cmd="cat "$summary_file" | awk -F \"\\t\" '"$f" && \$11==\"latest\" {print \$20}' > "${output}"/completeGenomePaths.txt"
+    cmd="cat "$filtered_summary" | awk -F \"\\t\" '"$f" && \$11==\"latest\" {print \$20}' > "${output}"/completeGenomePaths.txt"
 elif [ -z "$level" ] && [ -n "$name" ]; then
     echo "Downloading all available sequences for "$name"..."
     cmd="cat "$filtered_summary" | awk -F \"\\t\" '\$11==\"latest\" {print \$20}' > "${output}"/completeGenomePaths.txt"
 else
     echo "Downloading all available sequences for "$db_type"..."
-    cmd="cat "$summary_file" | awk -F \"\\t\" '\$11==\"latest\" {print \$20}' > "${output}"/completeGenomePaths.txt"
+    cmd="cat "$filtered_summary" | awk -F \"\\t\" '\$11==\"latest\" {print \$20}' > "${output}"/completeGenomePaths.txt"
 fi
 
 # Add a check
