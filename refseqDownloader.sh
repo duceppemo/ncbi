@@ -163,7 +163,7 @@ else
 
     #Download the refseq assembly summary file
     cd "$output"
-    # wget --timestamp "$summary_url" -q --show-progress #-P "$output"
+    wget --timestamp "$summary_url" -q --show-progress #-P "$output"
     summary_file=""${output}"/assembly_summary.txt"
 fi
 
