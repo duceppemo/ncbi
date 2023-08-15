@@ -20,7 +20,7 @@ Mandatory flags:
 
     -q | -l     Query text (e.g. "Mycobacterim bovis") OR list file with accession numbers
 
-    -t          Type of sequece to retrieve ("refseq" or "assemblies")
+    -t          Type of sequence to retrieve ("refseq" or "assemblies")
 
     -o          Output folder
 

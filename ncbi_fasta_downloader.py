@@ -280,7 +280,7 @@ class NcbiDownloader(object):
 
 if __name__ == '__main__':
 
-    parser = ArgumentParser(description='Download DNA sequence from NCBI and add taxonomy for QIIME2.')
+    parser = ArgumentParser(description='Download DNA sequences from NCBI from a query string or an accession list.')
     parser.add_argument('-q', '--query', metavar='\"txid4762[Organism:exp] AND (\"internal transcribed spacer\"[Title]) NOT uncultured[Title]\"',
                         required=True,
                         type=str,
