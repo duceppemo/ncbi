@@ -1,11 +1,14 @@
 #!/bin/bash
 
-version="0.2.2"
+version="0.2.3"
 
 # Script description:
 
 # This script will download ".fna" ".ffn", ".faa" and ".gff", if availables, from NCBI RefSeq for a specific database.
 # Assembly level and name filtering are also available as options.
+
+# Create virtual environment
+#mamba create -n ncbi -c conda-forge ncbi-datasets-cl bzip2 parallel pigz
 
 
 #################
@@ -164,10 +167,7 @@ else
     #Download the refseq assembly summary file
     cd "$output"
 <<<<<<< HEAD
-    wget "$summary_url" -q --show-progress #-P "$output"
-=======
-    wget "$summary_url" -q --show-progress
->>>>>>> 2aefb1a3cd06763961f48e5cd44a485991fd7fac
+    wget "$summary_url" -q --show-progress -P "$output"
     summary_file=""${output}"/assembly_summary.txt"
 fi
 
