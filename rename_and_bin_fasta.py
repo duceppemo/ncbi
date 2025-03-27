@@ -58,7 +58,7 @@ class Binner(object):
             header = f.readline().rstrip()  # Only read the first line
 
         # Try to clean the header a bit
-        header = header.replace('sp.', 'sp').replace('ssp.', 'ssp').replace('subsp.', 'subsp').replace(',', '').replace('/', '-')
+        header = header.replace('sp.', 'sp').replace('ssp.', 'ssp').replace('subsp.', 'subsp').replace('bv.', 'bv').replace(',', '').replace('/', '-')
         header = re.sub(r'\W+>.', ' ', header)  # remove special characters
         header = re.sub(r'[:\[\]]+','', header)  # remove more special characters not included in "\W"
 
