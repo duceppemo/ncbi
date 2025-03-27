@@ -58,7 +58,8 @@ class Binner(object):
             header = f.readline().rstrip()  # Only read the first line
 
         # Try to clean the header a bit
-        header = header.replace('sp.', 'sp').replace('ssp.', 'ssp').replace('subsp.', 'subsp').replace('bv.', 'bv').replace(',', '').replace('/', '-')
+        header = header.replace('sp.', 'sp').replace('ssp.', 'ssp').replace('subsp.', 'subsp')\
+        .replace('bv.', 'bv').replace('str.', 'str').replace(',', '').replace('/', '-')
         header = re.sub(r'\W+>.', ' ', header)  # remove special characters
         header = re.sub(r'[:\[\]]+','', header)  # remove more special characters not included in "\W"
 
@@ -104,7 +105,6 @@ class Binner(object):
             genus = 'Candidatus_' + header_list[i + 1] + '_'
             species = header_list[i + 2]
 
-        # Suffixes
         if any(x in header_list[1:] for x in ['subsp', 'ssp']):
             try:
                 i = header_list.index('subsp')
@@ -117,7 +117,6 @@ class Binner(object):
             i = header_list.index('variant')
             variant = '_variant_' + header_list[i + 1]
 
-        # Suffixes
         if any(x in header_list[1:] for x in ['biovar', 'bv']):
             try:
                 i = header_list.index('biovar')
@@ -125,8 +124,11 @@ class Binner(object):
                 i = header_list.index('bv')
             subsp = '_biovar_' + header_list[i + 1]
 
-        if 'strain' in header_list[1:]:
-            i = header_list.index('strain')
+        if any(x in header_list[1:] for x in ['strain', 'str']):
+            try:
+                i = header_list.index('strain')
+            except ValueError:
+                i = header_list.index('str')
             strain = '_strain_' + header_list[i + 1]
 
         if 'isolate' in header_list[1:]:
