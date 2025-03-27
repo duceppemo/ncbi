@@ -122,7 +122,7 @@ class Binner(object):
                 i = header_list.index('biovar')
             except ValueError:
                 i = header_list.index('bv')
-            subsp = '_biovar_' + header_list[i + 1]
+            biovar = '_biovar_' + header_list[i + 1]
 
         if any(x in header_list[1:] for x in ['strain', 'str']):
             try:
