@@ -70,6 +70,7 @@ class Binner(object):
         species = header_list[2]
         subsp = ''
         variant = ''
+        biovar= ''
         strain = ''
         isolate = ''
         header_end = ' '.join(header_list[3:])
@@ -116,6 +117,14 @@ class Binner(object):
             i = header_list.index('variant')
             variant = '_variant_' + header_list[i + 1]
 
+        # Suffixes
+        if any(x in header_list[1:] for x in ['biovar', 'bv']):
+            try:
+                i = header_list.index('biovar')
+            except ValueError:
+                i = header_list.index('bv')
+            subsp = '_biovar_' + header_list[i + 1]
+
         if 'strain' in header_list[1:]:
             i = header_list.index('strain')
             strain = '_strain_' + header_list[i + 1]
@@ -125,10 +134,10 @@ class Binner(object):
             isolate = '_isolate_' + header_list[i + 1]
 
         # Generate new name
-        new_name = '{}{}{}{}{}{}{}'.format(acc, genus, species, subsp, variant, strain, isolate)
+        new_name = '{}{}{}{}{}{}{}{}'.format(acc, genus, species, subsp, variant, biovar, strain, isolate)
 
         # Generate bin name
-        bin_name = '{}{}{}{}'.format(genus, species, subsp, variant)
+        bin_name = '{}{}{}{}{}'.format(genus, species, subsp, variant, biovar)
         my_bin = output_folder + '/' + bin_name
 
         # Create folder
